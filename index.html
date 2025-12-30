@@ -199,36 +199,35 @@
 
         .modal-desc { line-height: 1.6; color: #ccc; margin-bottom: 30px; font-size: 0.95rem; }
 
-        /* VIDEO PLAYER MODAL */
+        /* VIDEO PLAYER FULL SCREEN */
         #video-player-modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
+            height: 100vh;
+            background: #000;
             z-index: 2000;
             display: none;
-            justify-content: center;
-            align-items: center;
             animation: fadeIn 0.3s ease;
-        }
-
-        .video-player-container {
-            position: relative;
-            width: 90%;
-            max-width: 900px;
-            background: #000;
-            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3);
         }
 
-        .video-close-btn {
+        .video-header {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 20px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8), transparent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 2001;
+        }
+
+        .video-back-btn {
+            background: rgba(0, 0, 0, 0.6);
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -237,20 +236,44 @@
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            z-index: 2001;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(5px);
         }
 
-        .video-close-btn:hover {
+        .video-back-btn:hover {
             background: rgba(255, 0, 0, 0.8);
-            border-color: #ff0000;
+        }
+
+        .video-title-header {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .video-player-container {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         #movie-video-player {
             width: 100%;
-            aspect-ratio: 16/9;
+            height: 100%;
             background: #000;
+            border: none;
+        }
+
+        /* Para videos nativos (MP4, etc) */
+        video#movie-video-player {
+            object-fit: contain;
+        }
+
+        /* Para iframes (YouTube, Drive, etc) */
+        iframe#movie-video-player {
+            border: none;
         }
 
         #profile-section { display: none; padding: 20px; text-align: center; animation: slideUp 0.4s; }
@@ -424,16 +447,17 @@
         </div>
     </div>
 
-    <!-- VIDEO PLAYER MODAL -->
+    <!-- VIDEO PLAYER FULL SCREEN -->
     <div id="video-player-modal">
-        <div class="video-player-container">
-            <div class="video-close-btn" onclick="closeVideoPlayer()">
-                <i class="fas fa-times"></i>
+        <div class="video-header">
+            <div class="video-back-btn" onclick="closeVideoPlayer()">
+                <i class="fas fa-arrow-left"></i>
             </div>
-            <video id="movie-video-player" controls autoplay>
-                <source src="" type="video/mp4">
-                Tu navegador no soporta video HTML5.
-            </video>
+            <div class="video-title-header" id="video-title-text">Película</div>
+            <div style="width: 40px;"></div>
+        </div>
+        <div class="video-player-container" id="video-container">
+            <!-- El reproductor se inyectará aquí dinámicamente -->
         </div>
     </div>
 
@@ -795,32 +819,123 @@
             }
         }
 
+        // FUNCIÓN PARA DETECTAR TIPO DE VIDEO Y CREAR PLAYER APROPIADO
+        function getVideoEmbedCode(url) {
+            // YouTube
+            if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                let videoId = '';
+                if (url.includes('youtube.com/watch?v=')) {
+                    videoId = url.split('v=')[1]?.split('&')[0];
+                } else if (url.includes('youtu.be/')) {
+                    videoId = url.split('youtu.be/')[1]?.split('?')[0];
+                } else if (url.includes('youtube.com/embed/')) {
+                    videoId = url.split('embed/')[1]?.split('?')[0];
+                }
+                if (videoId) {
+                    return `<iframe id="movie-video-player" src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>`;
+                }
+            }
+            
+            // Google Drive
+            if (url.includes('drive.google.com')) {
+                let fileId = '';
+                if (url.includes('/file/d/')) {
+                    fileId = url.split('/file/d/')[1]?.split('/')[0];
+                } else if (url.includes('id=')) {
+                    fileId = url.split('id=')[1]?.split('&')[0];
+                }
+                if (fileId) {
+                    return `<iframe id="movie-video-player" src="https://drive.google.com/file/d/${fileId}/preview" allowfullscreen allow="autoplay"></iframe>`;
+                }
+            }
+            
+            // TikTok
+            if (url.includes('tiktok.com')) {
+                let videoId = url.split('/video/')[1]?.split('?')[0];
+                if (videoId) {
+                    return `<iframe id="movie-video-player" src="https://www.tiktok.com/embed/v2/${videoId}" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
+                }
+            }
+            
+            // Vimeo
+            if (url.includes('vimeo.com')) {
+                let videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+                if (videoId) {
+                    return `<iframe id="movie-video-player" src="https://player.vimeo.com/video/${videoId}?autoplay=1" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+                }
+            }
+            
+            // Dailymotion
+            if (url.includes('dailymotion.com') || url.includes('dai.ly')) {
+                let videoId = '';
+                if (url.includes('dailymotion.com/video/')) {
+                    videoId = url.split('/video/')[1]?.split('?')[0];
+                } else if (url.includes('dai.ly/')) {
+                    videoId = url.split('dai.ly/')[1]?.split('?')[0];
+                }
+                if (videoId) {
+                    return `<iframe id="movie-video-player" src="https://www.dailymotion.com/embed/video/${videoId}?autoplay=1" allowfullscreen allow="autoplay; fullscreen"></iframe>`;
+                }
+            }
+            
+            // Streamable
+            if (url.includes('streamable.com')) {
+                let videoId = url.split('streamable.com/')[1]?.split('?')[0];
+                if (videoId) {
+                    return `<iframe id="movie-video-player" src="https://streamable.com/e/${videoId}?autoplay=1" allowfullscreen allow="autoplay; fullscreen"></iframe>`;
+                }
+            }
+            
+            // MP4 directo u otros formatos de video
+            if (url.match(/\.(mp4|webm|ogg|m3u8)(\?|$)/i)) {
+                return `<video id="movie-video-player" controls autoplay controlsList="nodownload">
+                    <source src="${url}" type="video/mp4">
+                    Tu navegador no soporta video HTML5.
+                </video>`;
+            }
+            
+            // Cualquier otra URL - intentar con iframe genérico
+            return `<iframe id="movie-video-player" src="${url}" allowfullscreen allow="autoplay; fullscreen"></iframe>`;
+        }
+
         // FUNCIÓN PARA ABRIR EL REPRODUCTOR DE VIDEO
-        window.openVideoPlayer = (videoUrl) => {
+        window.openVideoPlayer = (videoUrl, title) => {
             const modal = document.getElementById('video-player-modal');
-            const video = document.getElementById('movie-video-player');
-            const source = video.querySelector('source');
+            const container = document.getElementById('video-container');
+            const titleHeader = document.getElementById('video-title-text');
             
-            source.src = videoUrl;
-            video.load();
+            // Limpiar contenedor
+            container.innerHTML = '';
             
-            modal.style.display = 'flex';
+            // Obtener el código embed apropiado
+            const embedCode = getVideoEmbedCode(videoUrl);
             
-            video.play().catch(err => {
-                console.log("Autoplay bloqueado:", err);
-                showToast("Presiona play para ver la película");
-            });
+            // Insertar el reproductor
+            container.innerHTML = embedCode;
+            
+            // Establecer título
+            titleHeader.textContent = title || 'Película';
+            
+            // Mostrar modal
+            modal.style.display = 'block';
+            
+            // Prevenir scroll del body
+            document.body.style.overflow = 'hidden';
         };
 
         // FUNCIÓN PARA CERRAR EL REPRODUCTOR
         window.closeVideoPlayer = () => {
             const modal = document.getElementById('video-player-modal');
-            const video = document.getElementById('movie-video-player');
+            const container = document.getElementById('video-container');
             
-            video.pause();
-            video.currentTime = 0;
+            // Limpiar contenedor (esto detiene el video)
+            container.innerHTML = '';
             
+            // Ocultar modal
             modal.style.display = 'none';
+            
+            // Restaurar scroll del body
+            document.body.style.overflow = 'auto';
         };
 
         window.openDetails = (movie) => {
@@ -863,7 +978,7 @@
             const playBtn = document.getElementById('play-trailer-btn');
             playBtn.onclick = () => {
                 if(movie.trailer) {
-                    openVideoPlayer(movie.trailer);
+                    openVideoPlayer(movie.trailer, movie.title);
                 } else {
                     showToast("Película no disponible");
                 }
@@ -886,4 +1001,4 @@
 
     </script>
 </body>
-</html>
+    </html>
